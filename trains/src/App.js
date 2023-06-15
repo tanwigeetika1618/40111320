@@ -1,35 +1,82 @@
-const express = require('express');
-const axios = require('axios');
+import React from 'react';
+import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
+import axios from 'axios';
 
-const app = express();
-const port = 8008;
+function TrainsPage() {
+  const [trains, setTrains] = React.useState([]);
 
-app.get('/numbers', async (req, res) => {
-  const { url } = req.query;
+  React.useEffect(() => {
+    axios.get('http://104.211.219.98:80/train/trains') 
+      .then(response => {
+        setTrains(response.data);
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }, []);
 
-  if (!url) {
-    return res.status(400).json({ error: 'No URLs provided' });
-  }
-
-  if (Array.isArray(url)) {
-    const results = await Promise.all(url.map(fetchData));
-    res.json(results);
-  } else {
-    const result = await fetchData(url);
-    res.json(result);
-  }
-});
-
-async function fetchData(url) {
-  try {
-    const response = await axios.get(url);
-    const data = response.data;
-    return data;
-  } catch (error) {
-    return { error: `Failed to fetch data from ${url}` };
-  }
+  return (
+    <div>
+      <h2>All Trains</h2>
+      <ul>
+        {trains.map(train => (
+          <li key={train.id}>
+            <Link to={`/trains/${train.id}`}>{train.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+function SingleTrainPage({ match }) {
+  const [train, setTrain] = React.useState(null);
+
+  React.useEffect(() => {
+    const trainId = match.params.trainId;
+    axios.get(`http://104.211.219.98/train/trains/2344`)
+      .then(response => {
+        setTrain(response.data);
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }, [match.params.trainId]);
+
+  if (!train) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div>
+      <h2>Train Details</h2>
+      <h3>{train.name}</h3>
+      <p>Departure Time: {train.departureTime}</p>
+      <p>Arrival Time: {train.arrivalTime}</p>
+      <p>Duration: {train.duration}</p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <div>
+        <nav>
+          <ul>
+            <li>
+              <Link to="/">All Trains</Link>
+            </li>
+          </ul>
+        </nav>
+
+        <Switch>
+          <Route path="/" exact component={TrainsPage} />
+          <Route path="/trains/:trainId" component={SingleTrainPage} />
+        </Switch>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
